@@ -1,0 +1,97 @@
+---
+title: "tutorial_s3cR"
+author: "created by : Guilhem Doulcier, transcripted by :Pierre Gaüzère"
+date: "29/01/2015"
+output: html_document
+---
+#Specific contributions to community changes tutorial
+
+Welcome in the tutorial for the s3cR  package to assess specific contributions to community changes.
+
+
+##Data exploration
+We will start by importing a fake dataset included in the folder doc/demo of the package. The file species.csv contains the informations about the trait value of a species. The file census.csv gives the number of individuals of each species by date and surveyed site.
+
+In a lot of functions of s3c, default columns names are n, date, site, species, trait\_value, trait\_var. Note that you can overwrite thoses names by using the col_names dictionary.
+
+```{r, echo=FALSE}
+setwd("~/PIERRE/GUILHEM")
+
+source("CWV/contrib.R")
+source("CWV/index.R")
+
+```
+
+```{r}
+# library(s3cR)
+library(plyr)
+```
+
+
+```{r}
+species <-read.csv("implmentationr/species.csv")
+head(species)
+```
+
+
+```{r}
+census  <-read.csv("implmentationr/census.csv")
+head(census)
+```
+
+
+
+##Compute local indices
+The function s3c.cwm(census,species) will compute the community weighted means (cwm) and variances (cwv).
+
+```{r}
+out<-cwi(census, species, trait_val_col = "size")
+print(out)
+```
+The bootstrap=True options will compute a bootstrap confidence interval for thoses indices.
+
+By default :
+*b=1000* redraw are performed, you can change this by using the option bootstrap_n.
+The confidence interval is for the 5%-95% percentiles, you can change this by using the option bootstrap_ci (default=.95)
+
+```{r}
+out<-cwi(census, species, trait_val_col = "size", 
+         bootstrap=T, 
+         bootstrap_n=100, 
+         bootstrap_ci=95)
+for (col in 1:ncol(out)) print(out[col])
+```
+
+
+
+
+##Compute specific contributions to variations
+The function s3c.contrib(initial\_census,final_census,species) will compute the community weighted means and variances specific contributions and their decompositions.
+
+```{r}
+ctrb<-contrib(census_i=census[census$date==2,],
+              census_f=census[census$date==3,],
+              species, trait_val_col="size")
+print(ctrb)
+```
+
+You can check that the sum of contributions is equal to the variation of the indice (for the variation, this exact if sample are big enough, or if we ignore Bessel's correction for small sample) :
+
+```{r}
+cwm2003<-cwi(census[census$date==3,], species, "size", bessel=F)
+cwm2002<-cwi(census[census$date==2,], species, "size", bessel=F)
+print(cwm2003-cwm2002)
+print((cbind(sum(ctrb$contrib), sum(ctrb$v_contrib))))
+```
+
+
+
+##Contributions on trends
+When multiple census are available through time, an alternative to compute the specific contribution for each pair of years is to compute it using the trends in the relative abundances. If the trends are computed by ordinary least square, the summation properties of cwm contributions stills hold.
+
+```{r}
+tr_ctrb<-trend_contrib(census, species, trait_val_col="size")
+print(tr_ctrb)
+```
+
+## Fo more details and examples, see the code associated to the publication in ecological indicators
